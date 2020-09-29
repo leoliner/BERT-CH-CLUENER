@@ -1,0 +1,2 @@
+# BERT-CH-CLUENER
+在CLUENER2020数据集上使用keras_bert进行NER
