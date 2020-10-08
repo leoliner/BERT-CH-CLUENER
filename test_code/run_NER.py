@@ -443,6 +443,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
 
     if len(tokens_a) > max_seq_length:
         tokens_a = tokens_a[:max_seq_length]
+
+
     tokens_b = None
     if example.text_b:
         tokens_b = tokenizer.tokenize(example.text_b)
@@ -763,12 +765,12 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 train_op=train_op,
                 scaffold_fn=scaffold_fn)
         elif mode == tf.estimator.ModeKeys.EVAL:
-            # eval 的 计算方式metric需要自己定义修改
+            # 对于token级任务，eval 的 计算方式metric需要自己定义修改
             def metric_fn(per_example_loss, label_ids, logits):
                 # def metric_fn(label_ids, logits):
                 predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
                 # 评估函数，计算准确率、召回率、F1，假如改类别的话，下方数字需要修改，10是总类别数，1-6是有用的类别。B、I、E，
-                # 具体见 tf.metrics里的函数
+                # 具体见 tf_metrics里的函数
                 precision = tf_metrics.precision(label_ids, predictions, 10, [1, 2, 3, 4, 5, 6], average="macro")
                 recall = tf_metrics.recall(label_ids, predictions, 10, [1, 2, 3, 4, 5, 6], average="macro")
                 f = tf_metrics.f1(label_ids, predictions, 10, [1, 2, 3, 4, 5, 6], average="macro")
