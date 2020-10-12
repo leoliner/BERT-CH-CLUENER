@@ -49,13 +49,15 @@ flags.DEFINE_string("vocab_file", '../checkpoint/chinese_L-12_H-768_A-12/vocab.t
                     "The vocabulary file that the BERT model was trained on.")
 
 flags.DEFINE_string(
-    "output_dir", '../output/cluener_public',
+    "output_dir", '../output/epoch-03',
     "The output directory where the model checkpoints will be written.")
 
 ## Other parameters
 
 flags.DEFINE_string(
-    "init_checkpoint", '../checkpoint/chinese_L-12_H-768_A-12/bert_model.ckpt',
+    "init_checkpoint",
+    # '../checkpoint/chinese_L-12_H-768_A-12/bert_model.ckpt',
+    '../output/epoch-02/model.ckpt-1679',
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
 flags.DEFINE_bool(
@@ -71,7 +73,7 @@ flags.DEFINE_integer(
 
 flags.DEFINE_bool("do_train", True, "Whether to run training.")
 
-flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
+flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
 
 flags.DEFINE_bool(
     "do_predict", False,
@@ -256,14 +258,15 @@ class ClueNerProcessor(DataProcessor):
         """Creates examples for the training and dev sets."""
         examples = []
         for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
+            # if i == 0:
+            #     continue
             guid = "%s-%s" % (set_type, i)
             text_a = tokenization.convert_to_unicode(line[0])
             labels = []
             for l in line[-1]:
                 labels.append(tokenization.convert_to_unicode(l))
             examples.append(InputExample(guid=guid, text_a=text_a, label=labels))
+        print("examples: " + str(len(examples)))
         return examples
 
     def _read_json(self, input_file, set_type):
@@ -274,7 +277,8 @@ class ClueNerProcessor(DataProcessor):
         :return: (text, label_list)
         """
         lines = []
-        if set_type == "train" or "dev":
+        print(set_type)
+        if (set_type == "train") or (set_type == "dev"):
             for line in open(input_file, encoding='utf-8'):
                 if not line.strip():
                     continue
@@ -307,6 +311,7 @@ class ClueNerProcessor(DataProcessor):
                 labels = ["O"] * len_  # 初始值是全O（大写的o），即非实体
                 text = _["text"]
                 lines.append((text, labels))
+        print("lines: "+str(len(lines)))
         return lines
 
 # 2020.10.4
@@ -709,9 +714,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
           predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
           # 评估函数，计算准确率、召回率、F1，假如改类别的话，下方数字需要修改，10是总类别数，1-6是有用的类别。B、I、E，
           # 具体见 tf.metrics里的函数
-          precision = tf_metrics.precision(label_ids, predictions, 40, list(range(1, 41)), average="macro")
-          recall = tf_metrics.recall(label_ids, predictions, 40, list(range(1, 41)), average="macro")
-          f = tf_metrics.f1(label_ids, predictions, 40, list(range(1, 41)), average="macro")
+          precision = tf_metrics.precision(label_ids, predictions, 41, list(range(1, 41)), average="macro")
+          recall = tf_metrics.recall(label_ids, predictions, 41, list(range(1, 41)), average="macro")
+          f = tf_metrics.f1(label_ids, predictions, 41, list(range(1, 41)), average="macro")
 
           return {
               "eval_precision": precision,
@@ -965,6 +970,8 @@ def main(_):
   if FLAGS.do_predict:
     predict_examples = processor.get_test_examples(FLAGS.data_dir)
     num_actual_predict_examples = len(predict_examples)
+    print(num_actual_predict_examples)
+
     if FLAGS.use_tpu:
       # TPU requires a fixed batch size for all batches, therefore the number
       # of examples must be a multiple of the batch size, or else examples
@@ -984,6 +991,7 @@ def main(_):
                     len(predict_examples) - num_actual_predict_examples)
     tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
 
+    
     predict_drop_remainder = True if FLAGS.use_tpu else False
     predict_input_fn = file_based_input_fn_builder(
         input_file=predict_file,
@@ -991,22 +999,26 @@ def main(_):
         is_training=False,
         drop_remainder=predict_drop_remainder)
 
+    
     result = estimator.predict(input_fn=predict_input_fn)
 
-    output_predict_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
-    with tf.gfile.GFile(output_predict_file, "w") as writer:
-      num_written_lines = 0
-      tf.logging.info("***** Predict results *****")
-      for (i, prediction) in enumerate(result):
-        probabilities = prediction["probabilities"]
-        if i >= num_actual_predict_examples:
-          break
-        output_line = "\t".join(
-            str(class_probability)
-            for class_probability in probabilities) + "\n"
-        writer.write(output_line)
-        num_written_lines += 1
-    assert num_written_lines == num_actual_predict_examples
+    # for i in result:
+    #     print(i)  # i是一个list[64]，对应着一句话预测出来的标签id
+
+    # output_predict_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
+    # with tf.gfile.GFile(output_predict_file, "w") as writer:
+    #   num_written_lines = 0
+    #   tf.logging.info("***** Predict results *****")
+    #   for (i, prediction) in enumerate(result):
+    #     probabilities = prediction["probabilities"]
+    #     if i >= num_actual_predict_examples:
+    #       break
+    #     output_line = "\t".join(
+    #         str(class_probability)
+    #         for class_probability in probabilities) + "\n"
+    #     writer.write(output_line)
+    #     num_written_lines += 1
+    # assert num_written_lines == num_actual_predict_examples
 
     id2label = {}
     for (i, j) in enumerate(label_list):
@@ -1017,10 +1029,14 @@ def main(_):
     print('******************正在写入测试结果*********************')
     fw = open(os.path.join(FLAGS.output_dir, "test_prediction.txt"), 'w', encoding='utf-8')
     for i in result:
-        output = " ".join(id2label[id] for id in i if id != 0) + "\n"
+        output = " ".join(id2label[id] for id in i ) + "\n"
         fw.write(output)
     fw.close()
     print("*********************写入完成********************")
+    # 发现预测结果比测试集少了一行！ 原因：_create_examples函数照抄了其他数据集的方法，其中跳过了第一行！
+    # 被井号注释掉的部分是原来bert自带的run_classifier.py的方法，不适用于本cluener2020数据集
+
+
 
 
 if __name__ == "__main__":
