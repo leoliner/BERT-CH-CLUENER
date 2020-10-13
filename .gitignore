@@ -3,3 +3,6 @@
 /output/
 /ner_data_set/
 /output2/
+!eval_results.txt
+!test_results
+
