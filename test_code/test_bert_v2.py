@@ -52,7 +52,7 @@ flags.DEFINE_string("vocab_file", '../checkpoint/chinese_L-12_H-768_A-12/vocab.t
                     "The vocabulary file that the BERT model was trained on.")
 
 flags.DEFINE_string(
-    "output_dir", '../output2/epoch-05-10/',
+    "output_dir", '../output2/epoch-10-15/',
     "The output directory where the model checkpoints will be written.")
 
 ## Other parameters
@@ -60,7 +60,7 @@ flags.DEFINE_string(
 flags.DEFINE_string(
     "init_checkpoint",
     # '../checkpoint/chinese_L-12_H-768_A-12/bert_model.ckpt',
-    "../output2/epoch-00-05/model.ckpt-1679",
+    "../output2/epoch-05-10/model.ckpt-1679",
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
 flags.DEFINE_bool(
@@ -79,7 +79,7 @@ flags.DEFINE_bool("do_train", True, "Whether to run training.")
 flags.DEFINE_bool("do_eval", True, "Whether to run eval on the dev set.")
 
 flags.DEFINE_bool(
-    "do_predict", True,
+    "do_predict", False,
     "Whether to run the model in inference mode on the test set.")
 
 flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
@@ -621,7 +621,6 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
         log_likelihood, transition_matrix = tf.contrib.crf.crf_log_likelihood(logits, labels, input_m)
         loss = tf.reduce_mean(-log_likelihood)
         print("transition_matrix"+str(transition_matrix.shape))
-
         # inference
         # decode_tags, best_score = tf.contrib.crf.crf_decode(logits, transition_matrix, input_m)
         # Args
@@ -717,8 +716,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 return {
                     "eval_precision": precision,
                     "eval_recall": recall,
-                    "eval_f": f,
-                    "probabilities": logits
+                    "eval_f": f
                 }
 
             eval_metrics = (metric_fn,
@@ -727,7 +725,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 mode=mode,
                 loss=total_loss,
                 eval_metrics=eval_metrics,
-                scaffold_fn=scaffold_fn)
+                scaffold_fn=scaffold_fn,
+                predictions={"probabilities": logits}
+            )
         else:
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
@@ -998,14 +998,17 @@ def main(_):
             drop_remainder=eval_drop_remainder)
 
         result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
+        predcit_result = estimator.predict(input_fn=eval_input_fn)
+        # print(result.keys()
 
+        ############写入验证结果###########
         output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.json")
         with tf.gfile.GFile(output_eval_file, "w") as writer:
             num_written_lines = 0
-            tf.logging.info("***** Predict results *****")
-            for (i, (example, prediction)) in enumerate(zip(output_eval_file, result)):
+            tf.logging.info("***** Evaluate results *****")
+            for (i, (example, prediction)) in enumerate(zip(eval_examples, predcit_result)):
                 probabilities = prediction["probabilities"][1:-1, :]
-                # print(probabilities)
+                print(probabilities)
                 if i >= num_actual_eval_examples:
                     break
                 index = example.guid
@@ -1031,9 +1034,12 @@ def main(_):
                 num_written_lines += 1
         assert num_written_lines == num_actual_eval_examples
 
+        ############求实际的f_score(各标签计算)###########
         gold_file = os.path.join(FLAGS.data_dir, "dev.json")
+        print(gold_file)
         f_score, avg = score.get_f1_score(pre_file=output_eval_file, gold_file=gold_file)
 
+        ############输出验证结果###########
         output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
         with tf.gfile.GFile(output_eval_file, "w") as writer:
             tf.logging.info("***** Eval results *****")

@@ -36,8 +36,8 @@ def get_f1_score_label(pre_lines, gold_lines, label="organization"):
 
 
 def get_f1_score(pre_file="ner_predict.json", gold_file="data/thuctc_valid.json"):
-    pre_lines = [json.loads(line.strip()) for line in open(pre_file) if line.strip()]
-    gold_lines = [json.loads(line.strip()) for line in open(gold_file) if line.strip()]
+    pre_lines = [json.loads(line.strip()) for line in open(pre_file, encoding='UTF-8') if line.strip()]
+    gold_lines = [json.loads(line.strip()) for line in open(gold_file, encoding='UTF-8') if line.strip()]
     f_score = {}
     labels = ['address', 'book', 'company', 'game', 'government', 'movie', 'name', 'organization', 'position', 'scene']
     sum = 0
@@ -50,6 +50,6 @@ def get_f1_score(pre_file="ner_predict.json", gold_file="data/thuctc_valid.json"
 
 
 # if __name__ == "__main__":
-#     f_score, avg = get_f1_score(pre_file="val_results.json", gold_file="data/thuctc_valid.json")
+#     f_score, avg = get_f1_score(pre_file="ner_predict.json", gold_file="data/thuctc_valid.json")
 #
 #     print(f_score, avg)
