@@ -1,36 +1,35 @@
-BERT-CH-CLUENER
-
-# 数据集  CLUENER2020
-#### 训练集
-
-`../ner_data_set/cluener_public/train.json`
-
-#### 验证集
-
-`../ner_data_set/cluener_public/eval.json`
-
-#### 测试集
-
-`../ner_data_set/cluener_public/test.json`
-
-    注:未提供真实标签,需要前往CLUE线上提交测试
-
-#### 标签
+# BERT-CH-CLUENER
+*   使用bert在cluener2020细粒度标签数据集上进行NER任务
+## 1.数据集
+*   [CLUENER 2020](https://github.com/CLUEbenchmark/CLUENER2020)
+#### 1.1.标签
 `../ner_data_set/cluener_public/label2id.json`
 
     ['address', 'book', 'company', 'game', 'government', 'movie', 'name', 'organization', 'position', 'scene']
     
     共十个实体,并使用SBME标记方式命名,加上非实体O,共41个标签值
+#### 1.2训练集
 
-#使用tensorflow（1.14.0）进行NER
-#### 1.创建checkpoint文件夹
+`../ner_data_set/cluener_public/train.json`
+
+#### 1.3验证集
+
+`../ner_data_set/cluener_public/eval.json`
+
+#### 1.4测试集
+
+`../ner_data_set/cluener_public/test.json`
+
+    注:未提供真实标签,需要前往CLUE线上提交测试
+## 2.项目运行
+#### 2.1.创建checkpoint文件夹
 下载并存放bert官方提供的预训练的中文模型的参数
 *   [BERT-Base, Chinese: Chinese Simplified and Traditional, 12-layer, 768-hidden, 12-heads, 110M parameters](https://storage.googleapis.com/bert_models/2018_11_03/chinese_L-12_H-768_A-12.zip)
 
-#### 2.创建bert文件夹
+#### 2.2.创建bert文件夹
 存放官方源码,需要 tensorflow >= 1.11.0
 *   `git clone bert`
-#### 3.修改flags中相关参数
+#### 2.3.修改flags中相关参数
 `flags.DEFINE_string(...)`
 *   data_dir
 
@@ -52,11 +51,11 @@ BERT-CH-CLUENER
 
     `True`
 
-#### 2.执行
+#### 2.4.执行
 
    `python test_bert_v2.py`
 
-#### 3.结果输出将至
+#### 2.5.结果输出将至
     ../
       /output_dir/
                  /model.ckpt
@@ -69,9 +68,10 @@ BERT-CH-CLUENER
                  /...
                    
 
-####  4.目前结果
+## 3.结果示例
 ###### 由于test.json未给出真实标签,仅eval可计算f socre:
 
+    epoch = 10
     f_score = {'address': 0.6351706036745407, 'book': 0.8172757475083058, 'company': 0.8032345013477088, 'game': 0.8440677966101694, 'government': 0.8134920634920635, 'movie': 0.8166089965397924, 'name': 0.8708971553610504, 'organization': 0.7920227920227921, 'position': 0.7929824561403509, 'scene': 0.7073791348600509}
     avg_f_score = 0.7893131247556825
     
