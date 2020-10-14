@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """BERT finetuning runner. Using cluener2020 dataset."""
-# 606行——使用crf加快训练速度
 
 from __future__ import absolute_import
 from __future__ import division
